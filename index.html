@@ -3,6 +3,22 @@
 <head>
 <meta charset="utf-8">
 <meta name="robots" content="noindex">
+<meta name="theme-color" content="#5B4BDB">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Catat Laba">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="theme-color" content="#5B4BDB">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Catat Laba">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Catat Laba</title>
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap" rel="stylesheet">
@@ -73,12 +89,15 @@ const BLN=["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","S
 const CIN=["Penjualan Photobooth","Penjualan Aplikasi","Modal / Investor","Pemasukan Lain"];
 const COUT=["Peralatan & Properti","Bahan & Operasional","Sewa Lapak / Alat","Marketing & Promosi","Langganan Digital","Modal / Investor","Pengeluaran Lain"];
 const MODAL="Modal / Investor";
+let dp=null;
+addEventListener("beforeinstallprompt",e=>{e.preventDefault();dp=e;if(typeof tab!=="undefined"&&tab==="lain")render()});
+if("serviceWorker" in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
 let tx=[],stores=[],store=null,tab="ring",mon="all",form=null;
 const CFG=window.APP_CONFIG||{};
 const configured=()=>/^https?:\/\//.test(CFG.SUPABASE_URL||"")&&(CFG.SUPABASE_ANON_KEY||"").length>20;
 async function api(path,opt){opt=opt||{};const k=CFG.SUPABASE_ANON_KEY;const h={apikey:k,"Content-Type":"application/json",Prefer:"return=representation"};
  if(k.startsWith("eyJ"))h.Authorization="Bearer "+k;Object.assign(h,opt.headers||{});
- const r=await fetch(CFG.SUPABASE_URL.replace(/\/$/,"")+"/rest/v1/"+path,{method:opt.method||"GET",headers:h,body:opt.body});
+ let r;try{r=await fetch(CFG.SUPABASE_URL.replace(/\/$/,"")+"/rest/v1/"+path,{method:opt.method||"GET",headers:h,body:opt.body})}catch(e){throw new Error("Tidak ada koneksi internet. Coba lagi kalau sudah online.")}
  const s=await r.text();let j=null;try{j=s?JSON.parse(s):null}catch(e){}
  if(!r.ok)throw new Error((j&&j.message)||("Gagal ("+r.status+")"));return j}
 async function loadStores(){stores=await api("pb_stores?select=*&order=created_at.asc")}
@@ -98,7 +117,7 @@ async function boot(){
  try{await loadStores();
   if(!stores.length)return welcome('<div class="card"><b>Selamat datang di Catat Laba</b><p class="muted">Buat toko pertama untuk mulai mencatat.</p><div class="row"><button class="btn" id="first">Buat toko</button></div></div>');
   await useStore(stores.find(s=>s.id===lastId())||stores[0])
- }catch(e){welcome('<div class="card"><b>Gagal memuat data</b><p class="muted">'+esc(e.message)+'</p><p class="muted">Pastikan supabase.sql sudah dijalankan dan URL serta key di config.js benar.</p></div>')}}
+ }catch(e){welcome(navigator.onLine===false?'<div class="card"><b>Sedang offline</b><p class="muted">Data disimpan di Supabase, jadi butuh internet. Sambungkan lalu buka ulang aplikasi.</p></div>':'<div class="card"><b>Gagal memuat data</b><p class="muted">'+esc(e.message)+'</p><p class="muted">Pastikan supabase.sql sudah dijalankan dan URL serta key di config.js benar.</p></div>')}}
 const $=s=>document.querySelector(s);
 const rp=n=>(n<0?"-":"")+"Rp "+Math.abs(Math.round(n)).toLocaleString("id-ID");
 const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -164,7 +183,7 @@ function saran(){const A=sum(tx),ms=months(),I=[],add=(t,h,p)=>I.push({t,h,p});
  if(dup.length||mis.length)add("warn","Cek kemungkinan salah catat",(dup.length?`${dup.length} transaksi tanggal dan keterangannya sama dengan transaksi lain (${dup.slice(0,3).map(x=>esc(x.desc)).join(", ")}). `:"")+(mis.length?`${mis.length} transaksi tanggalnya tidak cocok dengan keterangan (${mis.slice(0,3).map(x=>esc(x.desc)+" tercatat "+x.date.split("-").reverse().join("/")).join(", ")}). `:"")+"Buka tab Transaksi lalu perbaiki kalau memang keliru.");
  return `<h2>Saran dari data kamu</h2>`+(I.length?"":'<p class="muted">Isi beberapa transaksi dulu, nanti saran muncul di sini.</p>')+I.map(i=>`<div class="ins ${i.t}"><b>${esc(i.h)}</b>${i.p}</div>`).join("")}
 
-function lain(){return `<h2>Toko: ${esc(store.name)}</h2><div class="card"><div class="row" style="margin-top:0"><button class="btn g" id="ren">Ganti nama</button><button class="btn g" id="reload">Muat ulang</button></div><div class="row"><button class="btn d" id="delstore">Hapus toko ini</button></div></div><h2>Cadangan</h2><div class="card"><p class="muted" style="margin-top:0">Data tersimpan di Supabase. Kalau mau salinan sendiri, ambil sebagai CSV.</p><div class="row" style="margin-top:0"><button class="btn" id="csv">Salin data (CSV)</button></div></div>`}
+function lain(){return `<h2>Toko: ${esc(store.name)}</h2><div class="card"><div class="row" style="margin-top:0"><button class="btn g" id="ren">Ganti nama</button><button class="btn g" id="reload">Muat ulang</button></div><div class="row"><button class="btn d" id="delstore">Hapus toko ini</button></div></div>${dp?'<h2>Aplikasi</h2><div class="card"><div class="row" style="margin-top:0"><button class="btn" id="inst">Pasang di layar utama</button></div></div>':''}<h2>Cadangan</h2><div class="card"><p class="muted" style="margin-top:0">Data tersimpan di Supabase. Kalau mau salinan sendiri, ambil sebagai CSV.</p><div class="row" style="margin-top:0"><button class="btn" id="csv">Salin data (CSV)</button></div></div>`}
 
 function render(){const ss=$("#store");ss.innerHTML=stores.map(s=>`<option value="${s.id}" ${store&&s.id===store.id?"selected":""}>${esc(s.name)}</option>`).join("")+'<option value="__new">+ Toko baru...</option>';const sel=$("#mon");sel.innerHTML=`<option value="all">Semua bulan</option>`+months().map(k=>`<option value="${k}" ${k===mon?"selected":""}>${mlabel(k)}</option>`).join("");if(mon==="all")sel.value="all";
  $("#main").innerHTML={ring,trx,lap,sar:saran,lain}[tab]();
@@ -204,12 +223,13 @@ $("#mon").onchange=e=>{mon=e.target.value;render()};
 $("#fab").onclick=()=>openForm();
 $("#modal").onclick=e=>{if(e.target.id==="modal")closeM()};
 $("#main").onclick=e=>{const r=e.target.closest(".tx[data-id]");if(r)return openForm(r.dataset.id);
- const i=e.target.id;if(i==="ren")renameStore();if(i==="delstore")deleteStore();if(i==="reload")reloadAll();if(i==="first")newStore();
+ const i=e.target.id;if(i==="ren")renameStore();if(i==="delstore")deleteStore();if(i==="reload")reloadAll();if(i==="first")newStore();if(i==="inst"&&dp){dp.prompt();dp=null;render()}
  if(e.target.id==="csv"){const t="tanggal,jenis,jumlah,keterangan,kategori,metode\n"+sorted().map(x=>[x.date,x.type==="in"?"masuk":"keluar",x.amount,'"'+x.desc.replace(/"/g,'""')+'"','"'+x.cat+'"',x.method].join(",")).join("\n");
   $("#sheet").innerHTML=`<h2 style="margin-top:0">Data CSV</h2><p class="muted">Tekan dan tahan di kotak, pilih semua, lalu salin. Tempel ke Excel atau Notes.</p><textarea id="ta" readonly>${esc(t)}</textarea><div class="row"><button class="btn" id="cl">Tutup</button></div>`;
   $("#modal").classList.add("show");$("#cl").onclick=closeM;$("#ta").select()}};
 $("#main").oninput=e=>{if(e.target.id==="q"){window._q=e.target.value;const p=e.target.selectionStart;render();const q=$("#q");q.focus();q.setSelectionRange(p,p)}};
 boot();
+if("serviceWorker" in navigator)addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
 </script>
 </body>
 </html>

@@ -5,7 +5,8 @@ Aplikasi statis (HTML biasa, tanpa build) + Supabase sebagai database. Isi file:
 - `index.html` aplikasinya
 - `config.js` tempat mengisi URL dan key Supabase
 - `supabase.sql` pembuat tabel
-- `vercel.json` pengaturan Vercel (hanya menambah header noindex)
+- `vercel.json` pengaturan Vercel (header noindex dan cache service worker)
+- `manifest.json`, `sw.js`, `icon-*.png`, `apple-touch-icon.png` agar bisa dipasang sebagai aplikasi (PWA)
 
 ## 1. Siapkan Supabase (project yang sudah ada)
 
@@ -47,7 +48,15 @@ Setiap ubah `config.js` atau `index.html`, deploy ulang.
 - Ganti nama atau hapus toko ada di tab **Lainnya**.
 - Tombol **+** menambah transaksi, ketuk baris transaksi untuk edit atau hapus.
 
-## 5. Catatan keamanan (penting)
+## 5. Pasang sebagai aplikasi (PWA)
+
+Setelah deploy, buka alamat webnya di HP:
+- **Android (Chrome):** menu titik tiga > **Install app** / **Add to Home screen**, atau tombol **Pasang di layar utama** di tab Lainnya.
+- **iPhone (Safari):** tombol Share > **Add to Home Screen**.
+
+Aplikasi akan terbuka layar penuh tanpa address bar. Tampilan dasarnya tetap bisa dibuka tanpa internet, tapi data toko butuh koneksi karena disimpan di Supabase. Kalau nanti mengubah file aplikasi, versi baru akan terambil saat online; kalau terasa masih versi lama, tutup aplikasi lalu buka lagi.
+
+## 6. Catatan keamanan (penting)
 
 Karena tanpa login, URL dan key Supabase ikut terkirim ke browser, jadi siapa pun yang tahu alamat web kamu bisa melihat dan mengubah data semua toko. Untuk pemakaian pribadi atau tim kecil ini biasanya cukup kalau:
 
