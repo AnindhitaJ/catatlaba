@@ -171,16 +171,20 @@ function render(){const ss=$("#store");ss.innerHTML=stores.map(s=>`<option value
  document.querySelectorAll("#nav button").forEach(b=>b.classList.toggle("on",b.dataset.t===tab));
  $("#fab").style.display=(tab==="trx"||tab==="ring")?"block":"none"}
 
+function catOpts(t,sel){const l=[...new Set((t==="in"?CIN:COUT).concat(tx.filter(x=>x.type===t).map(x=>x.cat)).concat(sel?[sel]:[]))];
+ return l.map(c=>`<option ${c===sel?"selected":""}>${esc(c)}</option>`).join("")+'<option value="__newcat">+ Kategori baru...</option>'}
 function openForm(id){const x=id?tx.find(t=>t.id===id):{type:"out",date:new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10),amount:"",desc:"",cat:"Pengeluaran Lain",method:""};
- form={id,type:x.type};const cats=()=>(form.type==="in"?CIN:COUT).map(c=>`<option ${c===x.cat?"selected":""}>${esc(c)}</option>`).join("");
+ form={id,type:x.type};const cats=()=>catOpts(form.type,x.cat);
  $("#sheet").innerHTML=`<h2 style="margin-top:0">${id?"Edit":"Tambah"} transaksi</h2>
  <div class="seg"><button data-ty="in" class="${x.type==="in"?"on in":""}">Pemasukan</button><button data-ty="out" class="${x.type==="out"?"on out":""}">Pengeluaran</button></div>
  <label>Tanggal</label><input type="date" id="f_date" value="${x.date}"><label>Jumlah (Rp)</label><input type="number" inputmode="numeric" id="f_amt" value="${x.amount}">
  <label>Keterangan</label><input id="f_desc" value="${esc(x.desc)}"><label>Kategori</label><select id="f_cat">${cats()}</select><label>Metode bayar (opsional)</label><input id="f_met" value="${esc(x.method)}">
  <p class="muted" id="err" style="color:var(--out)"></p><div class="row"><button class="btn g" id="cancel">Batal</button>${id?'<button class="btn d" id="del">Hapus</button>':""}<button class="btn" id="ok">Simpan</button></div>`;
  $("#modal").classList.add("show");
- const setType=t=>{form.type=t;document.querySelectorAll("[data-ty]").forEach(b=>b.className=b.dataset.ty===t?"on "+t:"");$("#f_cat").innerHTML=(t==="in"?CIN:COUT).map(c=>`<option>${esc(c)}</option>`).join("")};
+ const setType=t=>{form.type=t;document.querySelectorAll("[data-ty]").forEach(b=>b.className=b.dataset.ty===t?"on "+t:"");$("#f_cat").innerHTML=catOpts(t,"")};
  document.querySelectorAll("[data-ty]").forEach(b=>b.onclick=()=>setType(b.dataset.ty));
+ $("#f_cat").onchange=e=>{const s=e.target;if(s.value!=="__newcat")return;const n=(prompt("Nama kategori baru:")||"").trim();if(!n){s.selectedIndex=0;return}
+  const o=document.createElement("option");o.textContent=n;o.value=n;s.insertBefore(o,s.lastElementChild);s.value=n};
  $("#cancel").onclick=closeM;
  if(id)$("#del").onclick=async()=>{if(!confirm("Hapus transaksi ini?"))return;try{await api("pb_transactions?id=eq."+id,{method:"DELETE"});tx=tx.filter(t=>t.id!==id);closeM();render()}catch(e){$("#err").textContent="Gagal menghapus: "+e.message}};
  $("#ok").onclick=async()=>{const amt=Math.round(+$("#f_amt").value),d=$("#f_date").value,ds=$("#f_desc").value.trim();
